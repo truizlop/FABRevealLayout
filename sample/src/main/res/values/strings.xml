@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">FABRevealLayout2</string>
+
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string name="game_title">Metal Gear Solid V: The Phantom Pain</string>
+    <string name="creator_name">A Hideo Kojima Game</string>
+    <string name="add_to_shopping_cart">Added to your shopping cart</string>
+</resources>
