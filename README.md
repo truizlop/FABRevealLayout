@@ -82,6 +82,10 @@ dependencies{
 }
 ```
 
+### Acknowledgements
+
+`FABRevealLayout` is based on this [proof of concept](https://github.com/saulmm/Curved-Fab-Reveal-Example) by Saúl Molinero and the explanations for [curved animations](http://graphics-geek.blogspot.com.es/2012/01/curved-motion-in-android.html) by Chet Haase.
+
 ## License
 
 
