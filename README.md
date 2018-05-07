@@ -79,7 +79,7 @@ Currently, both main and secondary views inside `FABRevealLayout` should have th
 
 ```groovy
 dependencies{
-	compile 'com.truizlop.fabreveallayout:library:1.0.0'
+	implementation 'com.truizlop.fabreveallayout:library:1.0.0'
 }
 ```
 
