@@ -1,3 +1,5 @@
+⚠ This library is no longer maintained ⚠️
+
 # FABRevealLayout 
 [![Android Arsenal](https://img.shields.io/badge/Android%20Arsenal-FABRevealLayout-green.svg?style=flat)](https://android-arsenal.com/details/1/2459)
 
