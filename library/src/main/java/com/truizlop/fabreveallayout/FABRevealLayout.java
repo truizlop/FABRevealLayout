@@ -32,6 +32,7 @@ import android.widget.RelativeLayout;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class FABRevealLayout extends RelativeLayout {
 
@@ -40,6 +41,7 @@ public class FABRevealLayout extends RelativeLayout {
     private static final int ANIMATION_DURATION = 500;
     private final Interpolator INTERPOLATOR = new FastOutSlowInInterpolator();
 
+    private AtomicBoolean isAnimating = new AtomicBoolean(false);
     private List<View> childViews = null;
     private FloatingActionButton fab = null;
     private CircularExpandingView circularExpandingView = null;
@@ -69,41 +71,41 @@ public class FABRevealLayout extends RelativeLayout {
         setupView(child);
         super.addView(child, index, params);
 
-        if(areAllComponentsReady()){
+        if (areAllComponentsReady()) {
             setupInitialState();
         }
     }
 
     private void setupView(View child) {
-        if(child instanceof FloatingActionButton){
+        if (child instanceof FloatingActionButton) {
             setupFAB(child);
-        }else if(!(child instanceof CircularExpandingView)){
+        } else if (!(child instanceof CircularExpandingView)) {
             setupChildView(child);
         }
     }
 
-    private void setupFAB(View view){
+    private void setupFAB(View view) {
         validateFAB();
         fab = (FloatingActionButton) view;
         fab.setOnClickListener(fabClickListener);
     }
 
-    private void setupChildView(View view){
+    private void setupChildView(View view) {
         validateChildView();
         childViews.add(view);
-        if(childViews.size() == 1){
+        if (childViews.size() == 1) {
             addCircularRevealView();
         }
     }
 
     private void validateFAB() {
-        if(fab != null){
+        if (fab != null) {
             throw new IllegalArgumentException("FABRevealLayout can only hold one FloatingActionButton");
         }
     }
 
     private void validateChildView() {
-        if(childViews.size() >= MAX_CHILD_VIEWS){
+        if (childViews.size() >= MAX_CHILD_VIEWS) {
             throw new IllegalArgumentException("FABRevealLayout can only hold two views");
         }
     }
@@ -116,55 +118,60 @@ public class FABRevealLayout extends RelativeLayout {
         addView(circularExpandingView, params);
     }
 
-    private boolean areAllComponentsReady(){
+    private boolean areAllComponentsReady() {
         return fab != null && childViews.size() == MAX_CHILD_VIEWS;
     }
 
-    private void setupInitialState(){
+    private void setupInitialState() {
         setupFABPosition();
         setupChildViewsPosition();
     }
 
-    private void setupFABPosition(){
+    private void setupFABPosition() {
         RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) fab.getLayoutParams();
         params.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
         params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, RelativeLayout.TRUE);
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             params.rightMargin = dipsToPixels(16);
             params.topMargin = dipsToPixels(20);
         }
         fab.bringToFront();
     }
 
-    private void setupChildViewsPosition(){
-        for(int i = 0; i < childViews.size(); i++){
+    private void setupChildViewsPosition() {
+        for (int i = 0; i < childViews.size(); i++) {
             RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) childViews.get(i).getLayoutParams();
             params.topMargin = dipsToPixels(FAB_SIZE);
         }
         getSecondaryView().setVisibility(GONE);
     }
 
-    private boolean isShowingMainView(){
+    private boolean isShowingMainView() {
         return getMainView().getVisibility() == VISIBLE;
     }
 
-    public void revealMainView(){
-        if(!isShowingMainView()){
-            startHideAnimation();
+    public void revealMainView() {
+        if (!isShowingMainView()) {
+            if (isAnimating.compareAndSet(false, true)) {
+                startHideAnimation();
+            }
         }
     }
 
-    public void revealSecondaryView(){
-        if(isShowingMainView()){
-            startRevealAnimation();
+    public void revealSecondaryView() {
+        if (isShowingMainView()) {
+            if (isAnimating.compareAndSet(false, true)) {
+                startRevealAnimation();
+            }
         }
     }
 
+    @SuppressWarnings("unused")
     public void setOnRevealChangeListener(OnRevealChangeListener onRevealChangeListener) {
         this.onRevealChangeListener = onRevealChangeListener;
     }
 
-    private void startRevealAnimation(){
+    private void startRevealAnimation() {
         View disappearingView = getMainView();
 
         ObjectAnimator fabAnimator = getFABAnimator();
@@ -181,7 +188,7 @@ public class FABRevealLayout extends RelativeLayout {
                 prepareForReveal();
                 expandCircle();
             }
-        } );
+        });
 
         set.start();
     }
@@ -189,8 +196,8 @@ public class FABRevealLayout extends RelativeLayout {
     private void prepareForReveal() {
         circularExpandingView.getLayoutParams().height = getMainView().getHeight();
         circularExpandingView.setColor(fab.getBackgroundTintList() != null ?
-                        fab.getBackgroundTintList().getDefaultColor() :
-                        0xFF000000
+                fab.getBackgroundTintList().getDefaultColor() :
+                0xFF000000
         );
         circularExpandingView.setVisibility(VISIBLE);
     }
@@ -208,31 +215,34 @@ public class FABRevealLayout extends RelativeLayout {
         float toX = view.getWidth() / 2 - fab.getWidth() / 2 + view.getLeft();
         float toY = view.getHeight() / 2 - fab.getHeight() / 2 + view.getTop();
 
-        if(isShowingMainView()) {
+        if (isShowingMainView()) {
             return new CurvedAnimator(fromX, fromY, toX, toY);
-        }else{
+        } else {
             return new CurvedAnimator(toX, toY, fromX, fromY);
         }
     }
 
-    private ObjectAnimator getFABAnimator(){
+    private ObjectAnimator getFABAnimator() {
+
         CurvedAnimator curvedAnimator = getCurvedAnimator();
         return ObjectAnimator.ofObject(this, "fabPosition", new CurvedPathEvaluator(), curvedAnimator.getPoints());
     }
 
-    private void expandCircle(){
-        Animator expandAnimator = circularExpandingView.expand();;
+    private void expandCircle() {
+        Animator expandAnimator = circularExpandingView.expand();
+
         expandAnimator.addListener(new AnimatorListenerAdapter() {
             @Override
             public void onAnimationEnd(Animator animation) {
                 super.onAnimationEnd(animation);
                 swapViews();
+                isAnimating.set(false);
             }
         });
         expandAnimator.start();
     }
 
-    private void startHideAnimation(){
+    private void startHideAnimation() {
         Animator contractAnimator = circularExpandingView.contract();
         View disappearingView = getSecondaryView();
         ObjectAnimator alphaAnimator = ObjectAnimator.ofFloat(disappearingView, "alpha", 1, 0);
@@ -252,7 +262,7 @@ public class FABRevealLayout extends RelativeLayout {
         set.start();
     }
 
-    private void moveFABToOriginalLocation(){
+    private void moveFABToOriginalLocation() {
         ObjectAnimator fabAnimator = getFABAnimator();
 
         setupAnimationParams(fabAnimator);
@@ -261,24 +271,28 @@ public class FABRevealLayout extends RelativeLayout {
             public void onAnimationEnd(Animator animation) {
                 super.onAnimationEnd(animation);
                 swapViews();
+                isAnimating.set(false);
             }
         });
 
         fabAnimator.start();
     }
 
-    public void setFabPosition(Point point){
+    @SuppressWarnings("unused")
+    public void setFabPosition(SimplePoint point) {
         fab.setX(point.x);
         fab.setY(point.y);
+
+
     }
 
     private void swapViews() {
-        if(isShowingMainView()){
+        if (isShowingMainView()) {
             getMainView().setVisibility(GONE);
             getMainView().setAlpha(1);
             getSecondaryView().setVisibility(VISIBLE);
             circularExpandingView.setVisibility(VISIBLE);
-        }else{
+        } else {
             getMainView().setVisibility(VISIBLE);
             getSecondaryView().setVisibility(GONE);
             getSecondaryView().setAlpha(1);
@@ -287,11 +301,11 @@ public class FABRevealLayout extends RelativeLayout {
         notifyListener();
     }
 
-    private void notifyListener(){
-        if(onRevealChangeListener != null){
-            if(isShowingMainView()){
+    private void notifyListener() {
+        if (onRevealChangeListener != null) {
+            if (isShowingMainView()) {
                 onRevealChangeListener.onMainViewAppeared(this, getMainView());
-            }else{
+            } else {
                 onRevealChangeListener.onSecondaryViewAppeared(this, getSecondaryView());
             }
         }
@@ -305,7 +319,7 @@ public class FABRevealLayout extends RelativeLayout {
         return childViews.get(0);
     }
 
-    private int dipsToPixels(float dips){
+    private int dipsToPixels(float dips) {
         return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dips, getResources().getDisplayMetrics());
     }
 
@@ -315,4 +329,11 @@ public class FABRevealLayout extends RelativeLayout {
         super.setLayoutParams(params);
     }
 
+
+    public interface OnRevealChangeListener {
+        void onMainViewAppeared(FABRevealLayout layout, View mainView);
+
+        void onSecondaryViewAppeared(FABRevealLayout layout, View secondaryView);
+
+    }
 }
